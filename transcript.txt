@@ -1,0 +1,6 @@
+user: Matthew
+assistant: Hello!
+assistant: I'm a medical assistant designed to help you find doctors and book appointments.  What is the name of the doctor you are looking for? Hello!  I'm a medical assistant designed to help you find doctors and book appointments. To start, please tell me the name of the doctor you're looking for.
+user: It's
+user: a b c.
+assistant: I am sorry, I cannot process that request.  Please provide the doctor's name you are looking for.

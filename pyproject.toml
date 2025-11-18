@@ -1,0 +1,16 @@
+[project]
+dependencies = [
+  "fastapi[standard]>=0.121.2",
+  "pipecat-ai[aic,cartesia,deepgram,google,local-smart-turn-v3,runner,silero,websocket]",
+  "twilio>=9.8.6",
+  "uvicorn>=0.38.0",
+  "requests>=2.31.0",
+  "pandas>=2.3.3",
+  "openpyxl>=3.1.5",
+  "loguru>=0.7.3",
+]
+description = "Add your description here"
+name = "new"
+readme = "README.md"
+requires-python = ">=3.12"
+version = "0.1.0"
