@@ -5,7 +5,9 @@ and handle subsequent WebSocket connections for Media Streams.
 """
 
 import os
+from pathlib import Path
 
+import inspect
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import (
@@ -17,8 +19,12 @@ from fastapi import (
     HTTPException,
     File,
 )
+
+load_dotenv(override=True)
+
 from fastapi.responses import HTMLResponse, JSONResponse
 from loguru import logger
+from services.bot import upload_file_to_cloud
 from server_utils import (
     DialoutResponse,
     dialout_request_from_request,
@@ -36,8 +42,8 @@ app = FastAPI()
 
 
 @app.get("/")
-def root():
-    return {"message": "Hello, World!"}
+async def upload_latest_recording():
+    return {"message": "hi there"}
 
 
 @app.post("/dialout", response_model=DialoutResponse)
@@ -90,67 +96,6 @@ async def get_twiml(request: Request) -> HTMLResponse:
     twiml_content = generate_twiml(twiml_request)
     print(twiml_content)
     return HTMLResponse(content=twiml_content, media_type="application/xml")
-
-
-@app.post("/recording_callback")
-async def recording_callback(request: Request, background_tasks: BackgroundTasks):
-    """Handle Twilio RecordingStatusCallback and download the finished recording.
-
-    Twilio will POST form data including RecordingSid and CallSid when a recording
-    is available. We download the recording as a WAV and save it under RECORDINGS_DIR.
-    """
-    logger.info("Received recording status callback from Twilio")
-
-    form = await request.form()
-    recording_sid = form.get("RecordingSid")
-    call_sid = form.get("CallSid")
-    recording_status = form.get("RecordingStatus")
-
-    if not recording_sid:
-        logger.warning("Recording callback missing RecordingSid")
-        return JSONResponse({"error": "missing RecordingSid"}, status_code=400)
-
-    account_sid = os.getenv("TWILIO_ACCOUNT_SID")
-    auth_token = os.getenv("TWILIO_AUTH_TOKEN")
-    if not account_sid or not auth_token:
-        logger.error("Twilio credentials missing for recording download")
-        return JSONResponse({"error": "missing_twilio_credentials"}, status_code=500)
-
-    recording_url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Recordings/{recording_sid}.wav"
-
-    recordings_dir = os.getenv("RECORDINGS_DIR", "./recordings")
-    os.makedirs(recordings_dir, exist_ok=True)
-    filename = os.path.join(recordings_dir, f"{call_sid or 'call'}_{recording_sid}.wav")
-
-    def _download_recording(url, auth, path):
-        # import requests inside the background function to avoid top-level import
-        import requests
-
-        try:
-            logger.info(f"Downloading recording from {url} to {path}")
-            resp = requests.get(url, auth=auth, stream=True, timeout=60)
-            resp.raise_for_status()
-            with open(path, "wb") as f:
-                for chunk in resp.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-
-            logger.info(f"Recording saved: {path}")
-        except Exception:
-            logger.exception("Failed to download recording")
-
-    # pass the auth tuple and the destination path
-    background_tasks.add_task(
-        _download_recording, recording_url, (account_sid, auth_token), filename
-    )
-
-    return JSONResponse(
-        {
-            "status": "download_queued",
-            "recording_sid": recording_sid,
-            "call_sid": call_sid,
-        }
-    )
 
 
 @app.websocket("/ws")
